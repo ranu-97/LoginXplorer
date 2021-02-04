@@ -1,0 +1,270 @@
+<html lang="en">
+    <head>
+        <title>Retrieve Single Employee Details using JsonPowerDB Database</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+        <!-- JsonPowerDB (JPDB) Javascript helper library-->
+        <script src="http://login2explore.com/jpdb/resources/js/jpdb-commons.js"></script>
+    </head>
+<body>
+<div class="container">
+<h2>Employee Details</h2>
+<form id="empForm" method="post">
+<div class="form-group">
+<span><label for="empId">Employee ID:</label> <label id="empIdMsg">
+</label></span>
+<input type="text" class="form-control" name="empId" id="empId"
+placeholder="Enter Employee ID" required>
+</div>
+<div class="form-group">
+<label for="empName">Employee Name:</label>
+<input type="text" class="form-control" id="empName"
+placeholder="Enter Employee Name" name="empName">
+</div>
+   
+    <div class="form-group">
+                    <div class="dropdown">
+                        <label class="control-label col-sm-2" for="empDepartment">Department_Name</label>
+                        <div class="col-sm-10">
+                            <select class="form-control" id="empDepartment" name='empDepartment'>
+                                <option>JAVA</option>
+                                <option>HR</option>
+                                <option>PHP</option>
+                                <option>UI</option>
+                                <option>ACCOUNTS</option>
+                                <option>OPERATIONS</option>
+                                <option>QA</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+    <div class="form-group">
+                    <label class="control-label col-sm-2" for="empSalary">Employee_Basic_Salary*</label>
+                    <div class="col-sm-10">
+                        <input type="number" required class="form-control" id="empSalary" placeholder="Employee Basic Salary" name="empSalary">
+                    </div>
+                </div>
+<div class="form-group">
+<label for="empEmail">Email:</label>
+<input type="email" class="form-control" id="empEmail"
+placeholder="Enter Employee Email" name="empEmail">
+</div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <input type="button"  value="First" id="first" onclick="getFirstRecord();" class="btn btn-primary"/>
+                        <input type="button"  value="Previous" id="previous" onclick="getPrevRecord();" class="btn btn-primary"/>
+                        <input type="button"  value="Next" id="next" onclick="getNextRecord();" class="btn btn-primary"/>
+                        <input type="button"  value="Last" id="last" onclick="getLastRecord();" class="btn btn-primary"/>
+                        <span id="empForm-message-line" style="color:#530dde;"></span>
+                        <span id="empForm-error-line" style="color:red;"></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Javascript code for retrieve single record data from JsonPowerDB database -->
+        <script>
+            var apiBaseUrl = "http://api.login2explore.com:5577";               // API Base URL
+            var irlPartUrl = "/api/irl";                                      // API End-Point IRL URL
+            // TBD Change the myDB and myRel with your choice of database name and relation name.
+            var dbName = "SAMPLE";
+            var relName = "Emp_Rel";
+            var recordNumber;
+
+            // TBD replace the connection-token with connection-token taken from JPDB dashboard.
+            var connToken = "90937094|-31948800838837568|90931594";
+
+            //To Set api base Url
+            setBaseUrl(apiBaseUrl);
+
+            // This function will enable navigation buttons
+            function enableNavButtons() {
+                $("#next").prop("disabled", false);
+                $("#previous").prop("disabled", false);
+                $("#first").prop("disabled", false);
+                $("#last").prop("disabled", false);
+            }
+
+            // This function will disable navigation buttons
+            function disableNavButtons() {
+                $("#next").prop("disabled", true);
+                $("#last").prop("disabled", true);
+                $("#previous").prop("disabled", true);
+                $("#first").prop("disabled", true);
+            }
+
+            // This function will retrieve an employee record based on Employee ID.
+            function getEmployee() {
+                var empID = $("#empId").val();
+                var dataObj = {
+                    empId: empID
+                };
+                var jsonObj = JSON.stringify(dataObj);
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-error-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    disableNavButtons();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a FIND_RECORD request - jpdb-commons.js method
+                var getFindRecordReq = createFIND_RECORDRequest(connToken, dbName, relName, jsonObj);
+
+                // The following like will execute the command and recieve response
+                var respFindRecordJson = executeCommand(getFindRecordReq, irlPartUrl);
+                var lvStatus = respFindRecordJson.status;
+                var lvMessage = respFindRecordJson.message;
+                if (lvStatus === 400) {
+                    $("#empForm-error-line").html(lvMessage).fadeIn().delay(2000).fadeOut();
+                    return false;
+                }
+                $.ajaxSetup({async: true});
+
+                var lvData = respFindRecordJson.data;
+                var dataRecordArray = lvData[0];                    // To get the desired record from response data which is in array format
+                var resultRow = dataRecordArray.record;
+                recordNumber = dataRecordArray['record number'];
+                $("#empForm-message-line").html("Record Number: " + recordNumber);
+
+                // This loop will set and display record data in the form
+                
+            // This function will get next record details from JsonPowerDB database
+            function getNextRecord() {
+                enableNavButtons();
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-error-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    disableNavButtons();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a NEXT_RECORD request - jpdb-commons.js method
+                var getNextRecordReq = createNEXT_RECORDRequest(connToken, dbName, relName, recordNumber);
+
+                // The following like will execute the command and recieve response
+                var respRecordJson = executeCommand(getNextRecordReq, irlPartUrl);
+
+                var lvNextMessage = respRecordJson.message;
+                if (lvNextMessage === 'EOF') {
+                    $("#empForm-error-line").html("Message from Server: " + lvNextMessage + " - End of File").fadeIn().delay(2000).fadeOut();
+                    $("#next").prop("disabled", true);
+                    $("#last").prop("disabled", true);
+                    return false;
+                }
+                $.ajaxSetup({async: true});
+
+                setDataInFormFields(respRecordJson);
+                return false;
+            }
+
+            // This function will set and display data in the form
+            function setDataInFormFields(respRecordJson) {
+                var lvData = respRecordJson.data;
+                var jsonlvData = JSON.parse(lvData);
+                recordNumber = jsonlvData['record_number'];
+                $("#empForm-message-line").html("Record Number: " + recordNumber);
+                var resultRow = jsonlvData['record'];
+
+                $.each(resultRow, function (index, row) {
+                    if (index === 'empGender') {
+                        $('input[name="empGender"][value="' + row + '"]').prop('checked', true);
+                    } else {
+                        $('#' + index + '').val(row);
+                    }
+                });
+            }
+
+            // This function will get previous record details from JsonPowerDB database
+            function getPrevRecord() {
+                enableNavButtons();
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-error-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    disableNavButtons();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a PREV_RECORD request - jpdb-commons.js method
+                var getPreviousRecordReq = createPREV_RECORDRequest(connToken, dbName, relName, recordNumber);
+
+                // The following like will execute the command and recieve response
+                var respRecordJson = executeCommand(getPreviousRecordReq, irlPartUrl);
+
+                var lvPrevMessage = respRecordJson.message;
+                if (lvPrevMessage === 'BOF') {
+                    $("#empForm-error-line").html("Message from Server: " + lvPrevMessage + " - Begining of File").fadeIn().delay(2000).fadeOut();
+                    $("#previous").prop("disabled", true);
+                    $("#first").prop("disabled", true);
+                    return false;
+                }
+                $.ajaxSetup({async: true});
+
+                setDataInFormFields(respRecordJson);
+                return false;
+            }
+
+            // This function will get first record details from JsonPowerDB database
+            function getFirstRecord() {
+                enableNavButtons();
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-error-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    disableNavButtons();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a FIRST_RECORD request - jpdb-commons.js method
+                var getFirstRecordReq = createFIRST_RECORDRequest(connToken, dbName, relName);
+
+                // The following like will execute the command and recieve response
+                var respRecordJson = executeCommand(getFirstRecordReq, irlPartUrl);
+
+                $.ajaxSetup({async: true});
+
+                setDataInFormFields(respRecordJson);
+                $("#first").prop("disabled", true);
+                $("#previous").prop("disabled", true);
+                return false;
+            }
+
+            // This function will get last record details from JsonPowerDB database
+            function getLastRecord() {
+                enableNavButtons();
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-error-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    disableNavButtons();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a LAST_RECORD request - jpdb-commons.js method
+                var getLastRecordReq = createLAST_RECORDRequest(connToken, dbName, relName);
+
+                // The following like will execute the command and recieve response
+                var respRecordJson = executeCommand(getLastRecordReq, irlPartUrl);
+
+                $.ajaxSetup({async: true});
+
+                setDataInFormFields(respRecordJson);
+                $("#next").prop("disabled", true);
+                $("#last").prop("disabled", true);
+                return false;
+            }
+        </script>
+    </body>
+</html>

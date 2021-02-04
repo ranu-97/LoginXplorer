@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Employee Table / Delete Record</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+        <!-- JsonPowerDB (JPDB) Javascript helper library-->
+        <script src="http://login2explore.com/jpdb/resources/js/jpdb-commons.js"></script>
+    </head>
+
+    <!-- TBD getDatabase(1, 5) where 1 is the page number and 5 is the page size and you can change as per your requirements-->
+    <body onload="getPage(1, 5);">
+        <!-- TBD - You can have any of your table here. -->
+        <!-- Employee Table -->
+        <div class="container">
+            <div class="row">
+                <span id="empForm-message-line" style="color:red;"></span>
+                <h2>Employee Details</h2>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary"  id="first" onclick="setPage(this.id)" >First</button>
+                    <button type="button" class="btn btn-primary" id="previous" onclick="setPage(this.id)">Previous</button>
+                    <button type="button" class="btn btn-primary"  id="next" onclick="setPage(this.id)">Next</button>
+                    <button type="button" class="btn btn-primary" id="last" onclick="setPage(this.id)">Last</button>
+                    <button type="button" class="btn btn-info" id="currentpageNo" disabled>PageNo: </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead id="emp-table-head">
+                        </thead>
+                        <tbody id="emp-table-body">
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal fade" id="removeConfirm" role="dialog">
+                <div class="modal-dialog">
+                    <!-- Modal content-->
+                    <div class="modal-content">
+                        <!-- Modal Header-->
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h4 class="modal-title">Delete Message</h4>
+                        </div>
+                        <!-- Modal Body-->
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete this record?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                            <button type="button" class="btn btn-warning" id="deleteConfirmed" value="" onclick="deleteRecord(this.value)" data-dismiss="modal">Yes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Javascript code for retrieve all employee data and to perform delete operation on that data from JsonPowerDB database -->
+        <script>
+            var apiBaseUrl = "http://api.login2explore.com:5577";        // API Base URL
+            var irlPartUrl = "/api/irl";                                // API End-Point IRL URL
+            var imlPartUrl = "/api/iml";                               // API End-Point IML URL
+
+            // TBD Change the dbName and relName with the database name and relation name that you used to store form data in #Create session.
+            var dbName = "SAMPLE";
+            var relName = "Emp_Rel";
+
+            // Local and Global variable to manage this page
+            var totalPage;
+            var currentpage;
+
+            // TBD replace the connection-token with connection-token taken from JPDB dashboard.
+            var connToken = "90937094|-31948800838837568|90931594";
+
+            //To Set api base Url
+            setBaseUrl(apiBaseUrl);
+
+            // To set a page when a particular button is clicked
+            function setPage(buttonId) {
+                var pageNo;
+                $("#next").prop("disabled", false);
+                $("#previous").prop("disabled", false);
+                $("#first").prop("disabled", false);
+                $("#last").prop("disabled", false);
+                if (buttonId === "first") {
+                    pageNo = 1;
+                } else if (buttonId === "last") {
+                    pageNo = totalPage;
+                } else if (buttonId === "previous" && currentpage !== 1) {
+                    pageNo = currentpage - 1;
+                } else if (buttonId === "next" && currentpage !== totalPage) {
+                    pageNo = currentpage + 1;
+                }
+                // The following like will get a request - page
+                getPage(pageNo, 5);
+            }
+
+            // Setting the requested record number to modal YES button
+            $(document).on("click", ".openConfirmationEvent", function () {
+                var eventId = $(this).data('id');
+                $("#deleteConfirmed").val(eventId);
+            });
+
+            // Managing enable or disable buttons as per displayed page
+            function buttonDisabled() {
+                if (currentpage === 1) {
+                    $("#previous").prop("disabled", true);
+                    $("#first").prop("disabled", true);
+                }
+                if (currentpage === totalPage) {
+                    $("#next").prop("disabled", true);
+                    $("#last").prop("disabled", true);
+                }
+            }
+
+            // The following function will perform delete operation when delete button is clicked
+            function deleteRecord(reqId) {
+                $.ajaxSetup({async: false});
+
+                // The following like will create a REMOVE request - jpdb-commons.js method
+                var getRemoveRequest = createREMOVERecordRequest(connToken, dbName, relName, reqId);
+
+                // The following like will execute the command and recieve response
+                var respJsonRecord = executeCommand(getRemoveRequest, imlPartUrl);
+                var status = respJsonRecord.status;
+                if (status === 200) {
+                    getPage(currentpage, 5);
+                }
+                $.ajaxSetup({async: true});
+            }
+
+            // The following will get a particular page from JsonPowerDB database of a particular page size
+            function getPage(pageNo, pageSize) {
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-message-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a GETALLCOL request - jpdb-commons.js method
+                var getReqCol = createGETALLCOLRequest(connToken, dbName, relName);
+
+                // The following like will execute the command and recieve response
+                var respJsonCol = executeCommand(getReqCol, irlPartUrl);
+                var dataColumn = respJsonCol.data;
+
+                // The following like will create a GETALL data request - jpdb-commons.js method
+                var getReqData = createGETALLRecordRequest(connToken, dbName, relName, pageNo, pageSize);
+
+                // The following like will execute the command and recieve response
+                var respJsonData = executeCommand(getReqData, irlPartUrl);
+                var data = respJsonData.data;
+                var recordsData = JSON.parse(data);                 // parsing the data which converts it into JSON Object format
+                var jsonArrayData = recordsData.json_records;
+
+                $.ajaxSetup({async: true});
+
+                totalPage = recordsData.total_pages;
+                currentpage = recordsData.current_page;
+                $("#currentpageNo").text("PageNo: " + currentpage);
+
+                buttonDisabled();
+
+                var text = createTableHeader(dataColumn);
+                $("#emp-table-head").html(text);
+
+                var tableHTML = createTableRows(jsonArrayData, dataColumn);
+                $("#emp-table-body").html(tableHTML);
+            }
+
+            // To dynamically create table heading
+            function createTableHeader(dataColumn) {
+                var text = "<tr>";
+                text += '<th>' + '</th>';
+                text += '<th>' + "rec_no" + '</th>';
+                $.each(dataColumn, function (index, row) {
+                    var columnName = row.colName;
+                    text += '<th>' + columnName + '</th>';
+                });
+                text += "</tr>";
+                return text;
+            }
+
+            // To dynamically create table rows and table data columns
+            function createTableRows(jsonArrayData, dataColumn) {
+                var tableHTML = "";
+                $.each(jsonArrayData, function (index, row) {
+                    var resultRow = row.record;
+                    var recordNo = row['rec_no'];
+                    if (resultRow === null) {
+                        tableHTML += '<tr class="emp-table-row">';
+                        tableHTML += '<td>';
+                        tableHTML += '<button type = "button" class ="btn btn-danger" data-id=\"' + recordNo + '\" disabled>';
+                        tableHTML += '<span class ="glyphicon glyphicon-trash" >';
+                        tableHTML += "</span>";
+                        tableHTML += "</button>";
+                        tableHTML += '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td align="center">' + "Deleted" + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '<td>' + '</td>';
+                        tableHTML += '</tr>\n';
+                    } else {
+                        tableHTML += '<tr class="emp-table-row">';
+                        tableHTML += '<td>';
+                        tableHTML += '<button type = "button" class ="openConfirmationEvent btn btn-danger" data-id=\"' + recordNo + '\" data-toggle="modal" data-target="#removeConfirm">';
+                        tableHTML += '<span class ="glyphicon glyphicon-trash" >';
+                        tableHTML += "</span>";
+                        tableHTML += "</button>";
+                        tableHTML += '</td>';
+                        tableHTML += '<td>' + recordNo + '</td>';
+                        $.each(dataColumn, function (index, row) {
+                            var columnName = row.colName;
+                            var columnData = resultRow[columnName];
+
+                            tableHTML += '<td>' + columnData + '</td>';
+                        });
+                        tableHTML += '</tr>\n';
+                    }
+                });
+                return tableHTML;
+            }
+        </script>
+    </body>
+</html>

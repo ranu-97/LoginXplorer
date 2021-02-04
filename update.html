@@ -1,0 +1,181 @@
+<html lang="en">
+    <head>
+        <title>Update Employee data into JsonPowerDB Database</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+        <!-- JsonPowerDB (JPDB) Javascript helper library-->
+        <script src="http://login2explore.com/jpdb/resources/js/jpdb-commons.js"></script>
+    </head>
+
+    <!-- The getRecordNumber will get the record number from url and display the details in the form ---->
+    <body onload="getRecordNumber();">
+        <div class="container">
+            <div style="margin-left:17%">
+                <h2>Edit Employee Details</h2>
+            </div>
+
+            <!-- TBD - You can have any of your form here. -->
+            <!-- TBD - The 'name' attribute is the column name in your relation / table. -->
+            <!-- Employee Form -->
+            <form class="form-horizontal" id="empForm" onsubmit="return updateRecord();">
+                <div class="form-group">
+<span><label for="empId">Employee ID:</label> <label id="empIdMsg">
+</label></span>
+<input type="text" class="form-control" name="empId" id="empId"
+placeholder="Enter Employee ID" required>
+</div>
+<div class="form-group">
+<label for="empName">Employee Name:</label>
+<input type="text" class="form-control" id="empName"
+placeholder="Enter Employee Name" name="empName">
+</div>
+   
+    <div class="form-group">
+                    <div class="dropdown">
+                        <label class="control-label col-sm-2" for="empDepartment">Department_Name</label>
+                        <div class="col-sm-10">
+                            <select class="form-control" id="empDepartment" name='empDepartment'>
+                                <option>JAVA</option>
+                                <option>HR</option>
+                                <option>PHP</option>
+                                <option>UI</option>
+                                <option>ACCOUNTS</option>
+                                <option>OPERATIONS</option>
+                                <option>QA</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+    <div class="form-group">
+                    <label class="control-label col-sm-2" for="empSalary">Employee_Basic_Salary*</label>
+                    <div class="col-sm-10">
+                        <input type="number" required class="form-control" id="empSalary" placeholder="Employee Basic Salary" name="empSalary">
+                    </div>
+                </div>
+<div class="form-group">
+<label for="empEmail">Email:</label>
+<input type="email" class="form-control" id="empEmail"
+placeholder="Enter Employee Email" name="empEmail">
+</div>
+
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <input type="submit" name="submit" value="Submit"/>
+                        <input type="button"  value="Cancel" onclick="getDataOnCancelEvent();"/>
+                        <span id="empForm-message-line" style="color:red;"></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Javascript code for editing record details and update changes to JsonPowerDB database -->
+        <script>
+            var apiBaseUrl = "http://api.login2explore.com:5577";            // API Base URL
+            var imlPartUrl = "/api/iml";                                    // API End-Point IML URL
+            var irlPartUrl = "/api/irl";                                   // API End-Point IRL URL
+
+            // TBD Change the myDB and myRel with your choice of database name and relation name.
+            var dbName = "SAMPLE";
+            var relName = "EMP_REL";
+
+            // TBD replace the connection-token with connection-token taken from JPDB dashboard.
+            var connToken = "90937094|-31948800838837568|90931594";
+
+            // Local and Global variable to manage this page
+            var recordData;
+            var recordNumber;
+
+            /*
+             * This method will return all parameters that were passed to this page
+             * in GET page url on browser.
+             */
+            function getRecordNumber() {
+                var vars = {};
+                window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi,
+                        function (m, key, value) {
+                            vars[key] = value;
+                        });
+                recordNumber = vars.recordId;
+                getRecordDetails();
+            }
+
+            // To get record details of a particular record number
+            function getRecordDetails() {
+
+                if (connToken === "" || connToken === "90937094|-31948800838837568|90931594") {
+                    $("#empForm-message-line").html("Invalid Connection Token").fadeIn().delay(2000).fadeOut();
+                    return false;
+                }
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a GET_RECORD request - jpdb-commons.js method
+                var getReqRecord = createGET_RECORDRequest(connToken, dbName, relName, recordNumber);
+
+                // The following like will execute the command and recieve response
+                var respJsonData = executeCommand(getReqRecord, apiBaseUrl, irlPartUrl);
+                var data = respJsonData.data;
+                recordData = JSON.parse(data);
+
+                $.ajaxSetup({async: true});
+
+                
+            // This function will update a particular record details in the JPDB database
+            function updateRecord() {
+                var $form = $("#empForm");
+                var data = getChangedFormDataInJson($form);
+                if (data === false) {
+                    $("#empForm-message-line").html("Record Update Status: " + "There is no change in the data!").fadeIn().delay(2000).fadeOut();
+                    return false;
+                }
+                var formJsonStr = JSON.stringify(data);
+
+                $.ajaxSetup({async: false});
+
+                // The following like will create a UPDATE request - jpdb-commons.js method
+                var getReqUpadateRecord = createUPDATERecordRequest(connToken, formJsonStr, dbName, relName, recordNumber);
+
+                // The following like will execute the command and recieve response
+                var getUpdateRecordJsonResult = executeCommand(getReqUpadateRecord, apiBaseUrl, imlPartUrl);
+                var message = getUpdateRecordJsonResult.message;
+                $("#empForm-message-line").html("Record Update Status: " + message).fadeIn().delay(2000).fadeOut();
+                var status = getUpdateRecordJsonResult.status;
+
+                if (status === 200) {
+                    var $form = $("#empForm");
+                    var data = getFormDataInJson($form);
+                    $.each(data, function (index, row) {
+                        localStorage.setItem(index, row);                  // Set the updated data into local storage
+                    });
+                }
+
+                $.ajaxSetup({async: true});
+                return false;
+            }
+
+            // This function will get the form data and check whether any changes occur or not
+            function getChangedFormDataInJson($form) {
+                var unindexed_array = $form.serializeArray();
+                var indexed_array = {};
+                var changeFlag = false;
+
+                $.map(unindexed_array, function (n, i) {
+                    var data = localStorage.getItem(n['name']);              // Get the record details from local storage
+                    if (data !== n['value']) {                              // comparing local storage data with current form data
+                        indexed_array[n['name']] = n['value'];
+                        changeFlag = true;
+                    }
+                });
+                if (changeFlag === false) {
+                    return false;
+                }
+                return indexed_array;
+            }
+        </script>
+    </body>
+</html>
