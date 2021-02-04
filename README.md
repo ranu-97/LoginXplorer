@@ -7,3 +7,17 @@ I have created a web page name retrieve data from which I can retrive data of th
 I also have created a web page name update data from which I can update or change the details of any employee.
 I have created a web page name deletedata using that web page I can remove the details of any employee.
 all the data is stored on JPDB.
+JsonPoweredDB Benefits :-
+JPDB is India’s first Multimode DBMS that supports JSON documents, key-value pair, and RDBMS. It is one of the fastest and most secured database of present time.
+*JPDB - Salient Features*
+# Nimble, Simple to use, In Memory, Real-time
+# Schema free - easy to maintain.
+# Serverless Support - fast development - cuts time to market
+# Multi-Mode database - one solution to variety of data
+# Build around worlds fastest* indexing engine PowerIndex
+# Webservices API - low development cost
+# A Single Instance - Million Indexes
+# Inbuilt support for Querying Multiple Databases
+# Multiple security layers
+# Server Side Native NoSQL - best performance.
+*JPDB* will help you to (1) reduce your development and maintenance cost, (2) minimize time to market, and (3) lowers the total cost of ownership considerably.
